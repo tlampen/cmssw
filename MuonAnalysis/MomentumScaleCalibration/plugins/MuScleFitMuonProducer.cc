@@ -2,24 +2,21 @@
 //
 // Package:    MuScleFitMuonProducer
 // Class:      MuScleFitMuonProducer
-// 
-/**\class MuScleFitMuonProducer MuScleFitMuonProducer.cc MuonAnalysis/MuScleFitMuonProducer/src/MuScleFitMuonProducer.cc
-
- Description: [one line class summary]
-
- Implementation:
-     [Notes on implementation]
-*/
+//
+/**
+ * Produce a new muon collection with corrected Pt. <br>
+ * It is also possible to apply a smearing to the muons Pt.
+ */
 //
 // Original Author:  Marco De Mattia,40 3-B32,+41227671551,
 //         Created:  Tue Jun 22 13:50:22 CEST 2010
-// $Id: MuScleFitMuonProducer.cc,v 1.2 2010/09/16 13:51:59 demattia Exp $
+// $Id: MuScleFitMuonProducer.cc,v 1.8 2010/12/13 11:23:42 demattia Exp $
 //
 //
-
 
 // system include files
 #include <memory>
+#include <string>
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -41,6 +38,13 @@
 
 #include "MuonAnalysis/MomentumScaleCalibration/interface/Functions.h"
 
+#include "CondFormats/RecoMuonObjects/interface/MuScleFitDBobject.h"
+#include "CondFormats/DataRecord/interface/MuScleFitDBobjectRcd.h"
+
+#include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "MuonAnalysis/MomentumScaleCalibration/interface/MomentumScaleCorrector.h"
+
 class MuScleFitMuonProducer : public edm::EDProducer {
    public:
       explicit MuScleFitMuonProducer(const edm::ParameterSet&);
@@ -50,16 +54,27 @@ class MuScleFitMuonProducer : public edm::EDProducer {
       virtual void beginJob() ;
       virtual void produce(edm::Event&, const edm::EventSetup&);
       virtual void endJob() ;
+      template<class T> std::auto_ptr<T> applyCorrection(const edm::Handle<T> & allMuons);
 
   edm::InputTag theMuonLabel_;
-  // Contains the numbers taken from the J/Psi
-  // smearFunctionType7 smearFunction;
+  bool patMuons_;
+  edm::ESHandle<MuScleFitDBobject> dbObject_;
+  std::string dbObjectLabel_;
+  unsigned long long dbObjectCacheId_;
+  boost::shared_ptr<MomentumScaleCorrector> corrector_;
 };
 
 MuScleFitMuonProducer::MuScleFitMuonProducer(const edm::ParameterSet& iConfig) :
-  theMuonLabel_( iConfig.getParameter<edm::InputTag>( "MuonLabel" ) )
+  theMuonLabel_( iConfig.getParameter<edm::InputTag>( "MuonLabel" ) ),
+  patMuons_( iConfig.getParameter<bool>( "PatMuons" ) ),
+  dbObjectLabel_( iConfig.getUntrackedParameter<std::string>("DbObjectLabel", "") ),
+  dbObjectCacheId_(0)
 {
-  produces<reco::MuonCollection>();
+  if ( patMuons_ == true ) {
+    produces<pat::MuonCollection>();
+  } else {
+    produces<reco::MuonCollection>();
+  }
 }
 
 
@@ -67,55 +82,78 @@ MuScleFitMuonProducer::~MuScleFitMuonProducer()
 {
 }
 
+
+template<class T>
+std::auto_ptr<T> MuScleFitMuonProducer::applyCorrection(const edm::Handle<T> & allMuons)
+{
+  std::auto_ptr<T> pOut(new T);
+
+  // Apply the correction and produce the new muons
+  for( typename T::const_iterator muon = allMuons->begin(); muon != allMuons->end(); ++muon ) {
+
+    //std::cout << "Pt before correction = " << muon->pt() << std::endl;
+    double pt = (*corrector_)(*muon);
+    //std::cout << "Pt after correction = " << pt << std::endl;
+    double eta = muon->eta();
+    double phi = muon->phi();
+
+    typename T::value_type * newMuon = muon->clone();
+    newMuon->setP4( reco::Particle::PolarLorentzVector( pt, eta, phi, muon->mass() ) );
+
+    pOut->push_back(*newMuon);
+  }
+  return pOut;
+}
+
 // ------------ method called to produce the data  ------------
 void MuScleFitMuonProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-  edm::Handle<reco::MuonCollection> allMuons;
-  iEvent.getByLabel (theMuonLabel_, allMuons);
+  unsigned long long dbObjectCacheId = iSetup.get<MuScleFitDBobjectRcd>().cacheIdentifier();
+  if ( dbObjectCacheId != dbObjectCacheId_ ) {
+    if ( dbObjectLabel_ != "" ) {
+      iSetup.get<MuScleFitDBobjectRcd>().get(dbObjectLabel_, dbObject_);
+    } else {
+      iSetup.get<MuScleFitDBobjectRcd>().get(dbObject_);
+    }
+  }
 
-  std::auto_ptr<reco::MuonCollection> pOut(new reco::MuonCollection);
+  //std::cout << "identifiers size from dbObject = " << dbObject_->identifiers.size() << std::endl;
+  //std::cout << "parameters size from dbObject = " << dbObject_->parameters.size() << std::endl;;
 
-  // Apply any bias and/or smearing to the events
+  // Create the corrector and set the parameters
+  corrector_.reset(new MomentumScaleCorrector( dbObject_.product() ) );
+
+  if( patMuons_ == true ) {
+    edm::Handle<pat::MuonCollection> allMuons;
+    iEvent.getByLabel (theMuonLabel_, allMuons);
+    iEvent.put(applyCorrection(allMuons));
+  }
+  else {
+    edm::Handle<reco::MuonCollection> allMuons;
+    iEvent.getByLabel (theMuonLabel_, allMuons);
+    iEvent.put(applyCorrection(allMuons));
+  }
+
+  // put into the Event
+  // iEvent.put(pOut);
+  // iEvent.put(applyCorrection(allMuons));
+  
+/*  std::auto_ptr<reco::MuonCollection> pOut(new reco::MuonCollection);
+
+  // Apply the correction and produce the new muons
   for( std::vector<reco::Muon>::const_iterator muon = allMuons->begin(); muon != allMuons->end(); ++muon ) {
 
-    double pt = muon->pt();
-
-    // Biasing the MC such that it reproduces the data + the residual error
-    double a_0 = 1.0039;
-    // double a_1 = 0.;
-    // // The miscalibration can be applied only for pt < 626 GeV/c
-    // if( pt < -a_0*a_0/(4*a_1) ) {
-    // pt = (-a_0 + sqrt(a_0*a_0 + 4*a_1*pt))/(2*a_1);
-    // }
-    pt = a_0*pt;
-
-    // Smearing
-    // std::cout << "smearing muon" << std::endl;
-    // std::vector<double> par;
-    // double * y = 0;
-    TF1 G("G", "[0]*exp(-0.5*pow(x,2)/[1])", -5., 5.);
-    double sigma = 0.00014; // converted from TeV^-1 to GeV^-1
-    double norm = 1/(sqrt(2*TMath::Pi()));
-    G.SetParameter(0,norm);
-    G.SetParameter(1,1);
-    // std::cout << "old pt = " << pt;
-    pt = 1/(1/pt + sigma*G.GetRandom());
-    // pt' = pt + sigma pt^2
-    // pt = pt*(1-G.GetRandom());
+    double pt = (*corrector_)(*muon);
     double eta = muon->eta();
     double phi = muon->phi();
-    // smearFunction.smear(pt, eta, phi, y, par);
-    // std::cout << " new pt = " << pt << std::endl;
 
     reco::Muon * newMuon = muon->clone();
     newMuon->setP4( reco::Particle::PolarLorentzVector( pt, eta, phi, muon->mass() ) );
 
     pOut->push_back(*newMuon);
   }
+*/
 
-  // put into the Event
-  // std::auto_ptr<reco::MuonCollection> pOut(new reco::MuonCollection(*allMuons));
-  iEvent.put(pOut);
 }
 
 // ------------ method called once each job just before starting event loop  ------------

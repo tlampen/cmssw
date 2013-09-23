@@ -58,9 +58,13 @@ public:
     }
   }
 
+  // EM+SC: 2013.01.11
+  // lorentzVector have both capital and lower case methods for pt(), eta() and phi
+  // if a lorentzVector is passed use, parArray form iteration i=0
+ 
   /// The second, optional, parameter is the iteration number
   template <class U>
-  double sigmaPt(const U & track, const int i = 0) {
+  double sigmaPt(const U & track, const int i=0) const {
     if( i > iterationNum_ || i < 0 ) {
       std::cout << "Error: wrong iteration number, there are " << iterationNum_ << "iterations, ther first one is 0" << std::endl;
       exit(1);
@@ -69,7 +73,7 @@ public:
   }
   /// The second, optional, parameter is the iteration number
   template <class U>
-  double sigmaCotgTh(const U & track, const int i = 0) {
+  double sigmaCotgTh(const U & track, const int i=0) const {
     if( i > iterationNum_ || i < 0 ) {
       std::cout << "Error: wrong iteration number, there are " << iterationNum_ << "iterations, ther first one is 0" << std::endl;
       exit(1);
@@ -78,7 +82,7 @@ public:
   }
   /// The second, optional, parameter is the iteration number
   template <class U>
-  double sigmaPhi(const U & track, const int i = 0) {
+  double sigmaPhi(const U & track, const int i=0) const {
     if( i > iterationNum_ || i < 0 ) {
       std::cout << "Error: wrong iteration number, there are " << iterationNum_ << "iterations, ther first one is 0" << std::endl;
       exit(1);
@@ -91,6 +95,7 @@ public:
     if( resolutionFunctionVec_.size() > i ) return resolutionFunction_[i];
     else return 0;
   }
+
 protected:
   /// Parser of the parameters file
   void readParameters( TString fileName );

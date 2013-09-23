@@ -4,8 +4,8 @@
 /** \class MuScleFit
  *  Analyzer of the Global muon tracks
  *
- *  $Date: 2010/10/22 17:48:07 $
- *  $Revision: 1.42 $
+ *  $Date: 2012/12/20 16:09:21 $
+ *  $Revision: 1.43 $
  *  \author C.Mariotti, S.Bolognesi - INFN Torino / T.Dorigo - INFN Padova
  */
 
@@ -16,11 +16,11 @@
 #include "DataFormats/Candidate/interface/LeafCandidate.h"
 #include <CLHEP/Vector/LorentzVector.h>
 #include <vector>
-// #include "MuonAnalysis/MomentumScaleCalibration/interface/Histograms.h"
+// #include "Histograms.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
-#include "MuonAnalysis/MomentumScaleCalibration/interface/MuScleFitBase.h"
+#include "MuScleFitBase.h"
 
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
@@ -32,7 +32,7 @@
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/CompositeCandidate.h"
 
-#include "MuonAnalysis/MomentumScaleCalibration/interface/MuScleFitMuonSelector.h"
+#include "MuScleFitMuonSelector.h"
 
 namespace edm {
   class ParameterSet;

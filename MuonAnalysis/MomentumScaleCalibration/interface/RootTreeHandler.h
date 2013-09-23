@@ -8,6 +8,7 @@
 #include <MuonAnalysis/MomentumScaleCalibration/interface/MuScleFitProvenance.h>
 #include <TH1F.h>
 #include <stdlib.h>
+#include <vector>
 
 typedef std::vector<std::pair<lorentzVector,lorentzVector> > MuonPairVector;
 
@@ -45,12 +46,13 @@ public:
 	exit(1);
       }
     }
-
+    std::cout << "savedPair->size() is "<<savedPair->size()<< std::endl;
     std::vector<MuonPair>::const_iterator muonPairIt = savedPair->begin();
     unsigned int iev = 0;
     for( ; muonPairIt != savedPair->end(); ++muonPairIt, ++iev ) {
 
       if( saveAll || ( (muonPairIt->mu1 != emptyLorentzVector) && (muonPairIt->mu2 != emptyLorentzVector) ) ) {
+
 	// muonPair->setPair(muonType, std::make_pair(muonPairIt->first, muonPairIt->second));
 	muonPair->copy(*muonPairIt);
 
@@ -80,10 +82,12 @@ public:
     f1->Close();
   }
 
+  // void readTree( const int maxEvents, const TString & fileName, MuonPairVector * savedPair,
+  //           	    const int muonType, MuonPairVector * genPair = 0 )
   void readTree( const int maxEvents, const TString & fileName, MuonPairVector * savedPair,
-		 const int muonType, MuonPairVector * genPair = 0 )
+		 const int muonType, std::vector<std::pair<int, int> > * evtRun, MuonPairVector * genPair = 0 )
   {
-    TFile * file = new TFile(fileName, "READ");
+    TFile * file = TFile::Open(fileName, "READ");
     if( file->IsOpen() ) {
       TTree * tree = (TTree*)file->Get("T");
       MuonPair * muonPair = 0;
@@ -99,6 +103,7 @@ public:
       for( Long64_t i=0; i<nentries; ++i ) {
         tree->GetEntry(i);
         savedPair->push_back(std::make_pair(muonPair->mu1, muonPair->mu2));
+	evtRun->push_back(std::make_pair(muonPair->event, muonPair->run));
         // savedPair->push_back(muonPair->getPair(muonType));
         if( genPair != 0 ) {
           genPair->push_back(std::make_pair(genMuonPair->mu1, genMuonPair->mu2));
@@ -117,7 +122,7 @@ public:
   void readTree( const int maxEvents, const TString & fileName, std::vector<MuonPair> * savedPair,
 		 const int muonType, std::vector<GenMuonPair> * genPair = 0 )
   {
-    TFile * file = new TFile(fileName, "READ");
+    TFile * file = TFile::Open(fileName, "READ");
     if( file->IsOpen() ) {
       TTree * tree = (TTree*)file->Get("T");
       MuonPair * muonPair = 0;
