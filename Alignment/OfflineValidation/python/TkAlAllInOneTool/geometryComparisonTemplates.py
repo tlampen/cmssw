@@ -9,7 +9,7 @@ process = cms.Process("ValidationIntoNTuples")
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.GlobalTag.globaltag = ".oO[GlobalTag]Oo." 
 
-process.load("Geometry.CMSCommonData.cmsIdealGeometryXML_cfi")
+process.load("Configuration.StandardSequences.Geometry_cff")
 process.load("Geometry.TrackerNumberingBuilder.trackerNumberingGeometry_cfi")
 process.load("Geometry.TrackerGeometryBuilder.trackerGeometry_cfi")
 
