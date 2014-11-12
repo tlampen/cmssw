@@ -50,7 +50,7 @@ process = cms.Process("validation")
 # global tag
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.GlobalTag.globaltag = ".oO[GlobalTag]Oo." 
-process.load("Geometry.CMSCommonData.cmsIdealGeometryXML_cff")
+process.load("Configuration.StandardSequences.Geometry_cff")
 
 process.load("Geometry.TrackerNumberingBuilder.trackerNumberingGeometry_cfi")
 
